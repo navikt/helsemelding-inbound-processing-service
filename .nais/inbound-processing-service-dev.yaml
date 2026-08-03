@@ -1,0 +1,55 @@
+apiVersion: "nais.io/v1alpha1"
+kind: "Application"
+metadata:
+  name: "inbound-processing-service"
+  namespace: "helsemelding"
+  labels:
+    team: "helsemelding"
+  annotations:
+    texas.nais.io/enabled: "true"
+spec:
+  image: {{ image }}
+  port: 8080
+  tokenx:
+    enabled: true
+  azure:
+    application:
+      enabled: true
+  kafka:
+    pool: nav-dev
+  accessPolicy:
+    outbound:
+      rules: []
+  liveness:
+    path: "/internal/health/liveness"
+    initialDelay: 30
+    timeout: 10
+    failureThreshold: 10
+  readiness:
+    path: "/internal/health/readiness"
+    initialDelay: 30
+    timeout: 10
+    failureThreshold: 10
+  observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: java
+      destinations:
+        - id: "grafana-lgtm"
+    logging:
+      destinations:
+        - id: elastic
+        - id: loki
+  prometheus:
+    enabled: true
+    path: /prometheus
+  replicas:
+    min: 1
+    max: 1
+    cpuThresholdPercentage: 50
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      memory: "1024Mi"
