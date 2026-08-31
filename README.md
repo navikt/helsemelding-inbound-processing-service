@@ -24,7 +24,6 @@ The service validates:
 
 - Kafka record key exists and is a valid UUID
 - Kafka record value exists, is not empty, and is valid XML
-- Kafka record has a non-empty `sourceSystem` header
 
 Invalid messages are logged as warnings and discarded.
 
