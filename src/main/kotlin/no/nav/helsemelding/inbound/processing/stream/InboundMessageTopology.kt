@@ -1,8 +1,10 @@
 package no.nav.helsemelding.inbound.processing.stream
 
+import arrow.core.getOrElse
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
 import no.nav.helsemelding.inbound.processing.config
+import no.nav.helsemelding.messageconverter.MessageConverter
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.Topology
 import org.apache.kafka.streams.kstream.KStream
@@ -11,7 +13,8 @@ import org.apache.kafka.streams.processor.api.FixedKeyProcessorSupplier
 private val log = KotlinLogging.logger {}
 
 class InboundMessageTopology(
-    private val validator: InboundMessageValidator
+    private val validator: InboundMessageValidator,
+    private val messageConverter: MessageConverter
 ) {
     fun build(): Topology {
         val builder = StreamsBuilder()
@@ -68,7 +71,9 @@ class InboundMessageTopology(
 
     private fun KStream<String, ProcessedMessage>.toJsonPayload(): KStream<String, String> =
         mapValues { message ->
-            // TODO: xmlToJsonMapper.toJson(message.payload)
-            message.payload
+            messageConverter.incomingDialogMessageXmlToJson(message.payload)
+                .getOrElse { error ->
+                    throw RuntimeException("Failed to convert XML to JSON: ${error.message}", error.cause)
+                }
         }
 }

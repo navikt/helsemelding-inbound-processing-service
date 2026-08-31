@@ -9,6 +9,7 @@ import io.micrometer.prometheus.PrometheusMeterRegistry
 import no.nav.helsemelding.inbound.processing.config.KafkaStreamsSettings
 import no.nav.helsemelding.inbound.processing.stream.InboundMessageTopology
 import no.nav.helsemelding.inbound.processing.stream.InboundMessageValidator
+import no.nav.helsemelding.messageconverter.MsgHeadMessageConverter
 import org.apache.kafka.streams.KafkaStreams
 
 private val log = KotlinLogging.logger {}
@@ -42,5 +43,6 @@ suspend fun ResourceScope.dependencies(): Dependencies = awaitAll {
 
 private fun inboundMessageTopology(): InboundMessageTopology =
     InboundMessageTopology(
-        InboundMessageValidator()
+        validator = InboundMessageValidator(),
+        messageConverter = MsgHeadMessageConverter()
     )

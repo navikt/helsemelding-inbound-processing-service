@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.kafka.streams)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.bundles.opentelemetry)
+    implementation(libs.message.converter)
 
     testImplementation(testLibs.bundles.kotest)
     testImplementation(testLibs.kafka.streams)

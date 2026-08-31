@@ -1,9 +1,13 @@
 package no.nav.helsemelding.inbound.processing.stream
 
+import arrow.core.right
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.mockk.every
+import io.mockk.mockk
 import no.nav.helsemelding.inbound.processing.config
+import no.nav.helsemelding.messageconverter.MessageConverter
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.TopologyTestDriver
@@ -14,8 +18,9 @@ class InboundMessageTopologySpec : StringSpec(
         val kafkaStreams = config().kafkaStreamsSettings
 
         "should route invalid message to error topic" {
+            val messageConverter = mockk<MessageConverter>()
             val testDriver = TopologyTestDriver(
-                InboundMessageTopology(InboundMessageValidator()).build(),
+                InboundMessageTopology(InboundMessageValidator(), messageConverter).build(),
                 kafkaStreams.toProperties()
             )
 
@@ -69,8 +74,12 @@ class InboundMessageTopologySpec : StringSpec(
         }
 
         "should route valid message to outbound topic" {
+            val convertedJson = """{"converted": true}"""
+            val messageConverter = mockk<MessageConverter>()
+            every { messageConverter.incomingDialogMessageXmlToJson(any()) } returns convertedJson.right()
+
             val testDriver = TopologyTestDriver(
-                InboundMessageTopology(InboundMessageValidator()).build(),
+                InboundMessageTopology(InboundMessageValidator(), messageConverter).build(),
                 kafkaStreams.toProperties()
             )
 
