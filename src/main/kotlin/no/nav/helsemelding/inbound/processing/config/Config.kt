@@ -79,8 +79,7 @@ data class KafkaStreamsSettings(
 
 data class Topics(
     val dialogMessageIn: String,
-    val dialogMessageOut: String,
-    val dialogMessageError: String
+    val dialogMessageOut: String
 )
 
 data class Server(

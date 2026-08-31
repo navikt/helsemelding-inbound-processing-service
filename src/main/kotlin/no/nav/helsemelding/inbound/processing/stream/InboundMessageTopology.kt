@@ -2,7 +2,6 @@ package no.nav.helsemelding.inbound.processing.stream
 
 import arrow.core.getOrElse
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.serialization.json.Json
 import no.nav.helsemelding.inbound.processing.config
 import no.nav.helsemelding.messageconverter.MessageConverter
 import org.apache.kafka.streams.StreamsBuilder
@@ -53,7 +52,7 @@ class InboundMessageTopology(
 
     private fun KStream<String, ProcessedMessage>.routeInvalidMessages() {
         filterNot { _, value -> value.isValid() }
-            .peek { key, value ->
+            .foreach { key, value ->
                 log.warn {
                     val errors = value.error().errors
                         .joinToString { error ->
@@ -62,11 +61,6 @@ class InboundMessageTopology(
                     "Message rejected by inbound validation: key=$key errors=[$errors]"
                 }
             }
-            .mapValues(ProcessedMessage::error)
-            .mapValues { errorMessage ->
-                Json.encodeToString(errorMessage)
-            }
-            .to(config().kafkaStreamsSettings.topics.dialogMessageError)
     }
 
     private fun KStream<String, ProcessedMessage>.toJsonPayload(): KStream<String, String> =
