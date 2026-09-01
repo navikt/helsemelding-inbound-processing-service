@@ -67,7 +67,10 @@ class InboundMessageTopology(
         mapValues { message ->
             messageConverter.incomingDialogMessageXmlToJson(message.payload)
                 .getOrElse { error ->
-                    throw RuntimeException("Failed to convert XML to JSON: ${error.message}", error.cause)
+                    log.error { "Failed to convert XML to JSON: ${error.message}" }
+                    null
                 }
         }
+            .filter { _, value -> value != null }
+            .mapValues { value -> value!! }
 }
