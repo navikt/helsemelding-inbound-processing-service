@@ -50,5 +50,38 @@ class InboundMessageProcessorSpec : StringSpec(
                 this.validation.isValid() shouldBe true
             }
         }
+
+        "should forward processed message as invalid when key and value are invalid" {
+            val record = mockk<FixedKeyRecord<String, String>> {
+                every { key() } returns "not-a-uuid"
+                every { value() } returns "not valid xml"
+                every { timestamp() } returns 123456789L
+                every { headers() } returns RecordHeaders()
+                every { withValue(any<ProcessedMessage>()) } answers {
+                    mockk<FixedKeyRecord<String, ProcessedMessage>> {
+                        every { value() } returns firstArg()
+                    }
+                }
+            }
+
+            val context = mockk<FixedKeyProcessorContext<String, ProcessedMessage>>(relaxed = true)
+
+            InboundMessageProcessor(InboundMessageValidator()).apply {
+                init(context)
+                process(record)
+            }
+
+            val forwarded = slot<FixedKeyRecord<String, ProcessedMessage>>()
+
+            verify(exactly = 1) {
+                context.forward(capture(forwarded))
+            }
+
+            forwarded.captured.value().apply {
+                this.validation.isValid() shouldBe false
+                this.validation.errors().map { it.code.name } shouldBe
+                    listOf("INVALID_KAFKA_KEY", "INVALID_KAFKA_VALUE")
+            }
+        }
     }
 )
