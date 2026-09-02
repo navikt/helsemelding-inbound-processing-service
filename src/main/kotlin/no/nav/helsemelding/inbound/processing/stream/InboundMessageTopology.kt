@@ -1,6 +1,5 @@
 package no.nav.helsemelding.inbound.processing.stream
 
-import arrow.core.getOrElse
 import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.helsemelding.inbound.processing.config
 import no.nav.helsemelding.messageconverter.MessageConverter
@@ -64,13 +63,14 @@ class InboundMessageTopology(
     }
 
     private fun KStream<String, ProcessedMessage>.toJsonPayload(): KStream<String, String> =
-        mapValues { message ->
+        flatMapValues { message ->
             messageConverter.incomingDialogMessageXmlToJson(message.payload)
-                .getOrElse { error ->
-                    log.error { "Failed to convert XML to JSON: ${error.message}" }
-                    null
-                }
+                .fold(
+                    {
+                        log.error { "Failed to convert XML to JSON: ${it.message}" }
+                        emptyList()
+                    },
+                    ::listOf
+                )
         }
-            .filter { _, value -> value != null }
-            .mapValues { value -> value!! }
 }
