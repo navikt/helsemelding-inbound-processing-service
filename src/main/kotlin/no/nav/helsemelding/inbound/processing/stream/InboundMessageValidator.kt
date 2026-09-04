@@ -9,14 +9,12 @@ import kotlin.uuid.Uuid
 
 data class InboundMessageValidation(
     val recordKey: RecordKeyValidation,
-    val recordValue: RecordValueValidation,
-    val recordMetadata: RecordMetadataValidation
+    val recordValue: RecordValueValidation
 )
 
 fun InboundMessageValidation.isValid(): Boolean =
     recordKey.isValid &&
-        recordValue.isValid &&
-        recordMetadata.isValid
+        recordValue.isValid
 
 fun InboundMessageValidation.errors(): List<ProcessingError> =
     buildList {
@@ -45,19 +43,6 @@ fun InboundMessageValidation.errors(): List<ProcessingError> =
 
             RecordValueValidation.Valid -> Unit
         }
-
-        when (val metadata = recordMetadata) {
-            is RecordMetadataValidation.Invalid ->
-                add(
-                    ProcessingError(
-                        category = ErrorCategory.VALIDATION,
-                        code = ErrorCode.MISSING_SOURCE_SYSTEM_HEADER,
-                        message = metadata.reason
-                    )
-                )
-
-            RecordMetadataValidation.Valid -> Unit
-        }
     }
 
 class InboundMessageValidator {
@@ -68,8 +53,7 @@ class InboundMessageValidator {
     ): InboundMessageValidation =
         InboundMessageValidation(
             recordKey = validateRecordKey(key),
-            recordValue = validateRecordValue(value),
-            recordMetadata = validateRecordMetadata(sourceSystem)
+            recordValue = validateRecordValue(value)
         )
 }
 
@@ -150,26 +134,3 @@ private fun String.isValidXml(): Boolean =
         true
     }
         .getOrElse { false }
-
-sealed interface RecordMetadataValidation : Validation {
-    data object Valid : RecordMetadataValidation {
-        override val isValid = true
-    }
-
-    data class Invalid(
-        val reason: String
-    ) : RecordMetadataValidation {
-        override val isValid = false
-    }
-}
-
-internal fun validateRecordMetadata(sourceSystem: String?): RecordMetadataValidation {
-    return when {
-        sourceSystem.isNullOrBlank() ->
-            RecordMetadataValidation.Invalid(
-                "Kafka record header '$SOURCE_SYSTEM_HEADER' is missing or empty"
-            )
-
-        else -> RecordMetadataValidation.Valid
-    }
-}

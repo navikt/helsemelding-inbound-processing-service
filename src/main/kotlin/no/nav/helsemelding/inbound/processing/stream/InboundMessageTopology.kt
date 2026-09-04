@@ -1,8 +1,8 @@
 package no.nav.helsemelding.inbound.processing.stream
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.serialization.json.Json
 import no.nav.helsemelding.inbound.processing.config
+import no.nav.helsemelding.messageconverter.MessageConverter
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.Topology
 import org.apache.kafka.streams.kstream.KStream
@@ -11,7 +11,8 @@ import org.apache.kafka.streams.processor.api.FixedKeyProcessorSupplier
 private val log = KotlinLogging.logger {}
 
 class InboundMessageTopology(
-    private val validator: InboundMessageValidator
+    private val validator: InboundMessageValidator,
+    private val messageConverter: MessageConverter
 ) {
     fun build(): Topology {
         val builder = StreamsBuilder()
@@ -50,7 +51,7 @@ class InboundMessageTopology(
 
     private fun KStream<String, ProcessedMessage>.routeInvalidMessages() {
         filterNot { _, value -> value.isValid() }
-            .peek { key, value ->
+            .foreach { key, value ->
                 log.warn {
                     val errors = value.error().errors
                         .joinToString { error ->
@@ -59,16 +60,17 @@ class InboundMessageTopology(
                     "Message rejected by inbound validation: key=$key errors=[$errors]"
                 }
             }
-            .mapValues(ProcessedMessage::error)
-            .mapValues { errorMessage ->
-                Json.encodeToString(errorMessage)
-            }
-            .to(config().kafkaStreamsSettings.topics.dialogMessageError)
     }
 
     private fun KStream<String, ProcessedMessage>.toJsonPayload(): KStream<String, String> =
-        mapValues { message ->
-            // TODO: xmlToJsonMapper.toJson(message.payload)
-            message.payload
+        flatMapValues { message ->
+            messageConverter.incomingDialogMessageXmlToJson(message.payload)
+                .fold(
+                    {
+                        log.error { "Failed to convert XML to JSON: ${it.message}" }
+                        emptyList()
+                    },
+                    ::listOf
+                )
         }
 }

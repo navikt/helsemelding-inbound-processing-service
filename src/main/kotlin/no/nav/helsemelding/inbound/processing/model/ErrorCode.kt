@@ -2,6 +2,5 @@ package no.nav.helsemelding.inbound.processing.model
 
 enum class ErrorCode {
     INVALID_KAFKA_KEY,
-    INVALID_KAFKA_VALUE,
-    MISSING_SOURCE_SYSTEM_HEADER
+    INVALID_KAFKA_VALUE
 }
