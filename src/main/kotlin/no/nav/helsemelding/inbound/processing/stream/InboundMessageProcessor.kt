@@ -68,7 +68,7 @@ class InboundMessageProcessor(
                     key = record.key(),
                     payload = record.value(),
                     sourceSystem = sourceSystem ?: "UNKNOWN",
-                    attachmentCount = attachmentCount?.toIntOrNull(),
+                    attachmentCount = attachmentCount?.toInt(),
                     validation = validation,
                     createdAt = Instant.fromEpochMilliseconds(record.timestamp()),
                     processedAt = Clock.System.now()
