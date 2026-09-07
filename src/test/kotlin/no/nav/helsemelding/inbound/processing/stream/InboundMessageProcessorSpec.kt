@@ -19,6 +19,7 @@ class InboundMessageProcessorSpec : StringSpec(
             val payload = "<message><content>hello</content></message>"
             val headers = RecordHeaders()
                 .add("sourceSystem", "some-system".encodeToByteArray())
+                .add(ATTACHMENT_COUNT_HEADER, "2".encodeToByteArray())
 
             val record = mockk<FixedKeyRecord<String, String>> {
                 every { key() } returns key
@@ -49,6 +50,7 @@ class InboundMessageProcessorSpec : StringSpec(
                 this.key shouldBe key
                 this.payload shouldBe payload
                 this.validation.isValid() shouldBe true
+                this.attachmentCount shouldBe 2
             }
         }
 
@@ -56,6 +58,7 @@ class InboundMessageProcessorSpec : StringSpec(
             val payload = "<message><content>hello</content></message>"
             val headers = RecordHeaders()
                 .add("sourceSystem", "some-system".encodeToByteArray())
+                .add(ATTACHMENT_COUNT_HEADER, "2".encodeToByteArray())
 
             val record = mockk<FixedKeyRecord<String, String>> {
                 every { key() } returns "not-a-uuid"
@@ -93,6 +96,7 @@ class InboundMessageProcessorSpec : StringSpec(
             val key = Uuid.random().toString()
             val headers = RecordHeaders()
                 .add("sourceSystem", "some-system".encodeToByteArray())
+                .add(ATTACHMENT_COUNT_HEADER, "2".encodeToByteArray())
 
             val record = mockk<FixedKeyRecord<String, String>> {
                 every { key() } returns key
@@ -124,6 +128,34 @@ class InboundMessageProcessorSpec : StringSpec(
                 this.validation.errors().size shouldBe 1
                 this.validation.errors().first().code shouldBe ErrorCode.INVALID_KAFKA_VALUE
             }
+        }
+
+        "should forward processed message as invalid when attachments-count header is missing" {
+            val record = mockk<FixedKeyRecord<String, String>> {
+                every { key() } returns Uuid.random().toString()
+                every { value() } returns "<message><content>hello</content></message>"
+                every { timestamp() } returns 123456789L
+                every { headers() } returns RecordHeaders()
+                every { withValue(any<ProcessedMessage>()) } answers {
+                    mockk<FixedKeyRecord<String, ProcessedMessage>> {
+                        every { value() } returns firstArg()
+                    }
+                }
+            }
+            val context = mockk<FixedKeyProcessorContext<String, ProcessedMessage>>(relaxed = true)
+
+            InboundMessageProcessor(InboundMessageValidator()).apply {
+                init(context)
+                process(record)
+            }
+
+            val forwarded = slot<FixedKeyRecord<String, ProcessedMessage>>()
+            verify(exactly = 1) {
+                context.forward(capture(forwarded))
+            }
+
+            forwarded.captured.value().validation.errors().map { it.code } shouldBe
+                listOf(ErrorCode.INVALID_ATTACHMENT_COUNT_HEADER)
         }
     }
 )
