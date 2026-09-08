@@ -1,6 +1,7 @@
 package no.nav.helsemelding.inbound.processing.stream
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -156,6 +157,46 @@ class InboundMessageProcessorSpec : StringSpec(
 
             forwarded.captured.value().validation.errors().map { it.code } shouldBe
                 listOf(ErrorCode.INVALID_ATTACHMENT_COUNT_HEADER)
+        }
+
+        "should forward processed message as invalid when attachments-count header is not a number" {
+            val key = Uuid.random().toString()
+            val payload = "<message><content>hello</content></message>"
+            val headers = RecordHeaders()
+                .add("sourceSystem", "some-system".encodeToByteArray())
+                .add(ATTACHMENT_COUNT_HEADER, "two".encodeToByteArray())
+
+            val record = mockk<FixedKeyRecord<String, String>> {
+                every { key() } returns key
+                every { value() } returns payload
+                every { timestamp() } returns 123456789L
+                every { headers() } returns headers
+                every { withValue(any<ProcessedMessage>()) } answers {
+                    mockk<FixedKeyRecord<String, ProcessedMessage>> {
+                        every { value() } returns firstArg()
+                    }
+                }
+            }
+
+            val context = mockk<FixedKeyProcessorContext<String, ProcessedMessage>>(relaxed = true)
+
+            InboundMessageProcessor(InboundMessageValidator()).apply {
+                init(context)
+                process(record)
+            }
+
+            val forwarded = slot<FixedKeyRecord<String, ProcessedMessage>>()
+
+            verify(exactly = 1) {
+                context.forward(capture(forwarded))
+            }
+
+            forwarded.captured.value().apply {
+                this.key shouldBe key
+                this.payload shouldBe payload
+                this.validation.isValid() shouldBe false
+                this.attachmentCount.shouldBeNull()
+            }
         }
     }
 )
