@@ -9,11 +9,13 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 internal const val SOURCE_SYSTEM_HEADER = "sourceSystem"
+internal const val ATTACHMENT_COUNT_HEADER = "attachments-count"
 
 data class ProcessedMessage(
     val key: String?,
     val payload: String,
     val sourceSystem: String,
+    val attachmentCount: Int?,
     val createdAt: Instant,
     val processedAt: Instant,
     val validation: InboundMessageValidation
@@ -48,10 +50,16 @@ class InboundMessageProcessor(
             ?.value()
             ?.decodeToString()
 
+        val attachmentCount = record.headers()
+            .lastHeader(ATTACHMENT_COUNT_HEADER)
+            ?.value()
+            ?.decodeToString()
+
         val validation = validator.validate(
             key = record.key(),
             value = record.value(),
-            sourceSystem = sourceSystem
+            sourceSystem = sourceSystem,
+            attachmentCount = attachmentCount
         )
 
         context.forward(
@@ -60,6 +68,7 @@ class InboundMessageProcessor(
                     key = record.key(),
                     payload = record.value(),
                     sourceSystem = sourceSystem ?: "UNKNOWN",
+                    attachmentCount = attachmentCount?.toIntOrNull(),
                     validation = validation,
                     createdAt = Instant.fromEpochMilliseconds(record.timestamp()),
                     processedAt = Clock.System.now()

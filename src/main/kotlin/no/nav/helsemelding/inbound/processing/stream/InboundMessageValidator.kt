@@ -9,12 +9,14 @@ import kotlin.uuid.Uuid
 
 data class InboundMessageValidation(
     val recordKey: RecordKeyValidation,
-    val recordValue: RecordValueValidation
+    val recordValue: RecordValueValidation,
+    val attachmentCount: AttachmentCountValidation
 )
 
 fun InboundMessageValidation.isValid(): Boolean =
     recordKey.isValid &&
-        recordValue.isValid
+        recordValue.isValid &&
+        attachmentCount.isValid
 
 fun InboundMessageValidation.errors(): List<ProcessingError> =
     buildList {
@@ -43,17 +45,32 @@ fun InboundMessageValidation.errors(): List<ProcessingError> =
 
             RecordValueValidation.Valid -> Unit
         }
+
+        when (val attachmentCount = attachmentCount) {
+            is AttachmentCountValidation.Invalid ->
+                add(
+                    ProcessingError(
+                        category = ErrorCategory.VALIDATION,
+                        code = ErrorCode.INVALID_ATTACHMENT_COUNT_HEADER,
+                        message = attachmentCount.reason
+                    )
+                )
+
+            is AttachmentCountValidation.Valid -> Unit
+        }
     }
 
 class InboundMessageValidator {
     fun validate(
         key: String?,
         value: String?,
-        sourceSystem: String?
+        sourceSystem: String?,
+        attachmentCount: String?
     ): InboundMessageValidation =
         InboundMessageValidation(
             recordKey = validateRecordKey(key),
-            recordValue = validateRecordValue(value)
+            recordValue = validateRecordValue(value),
+            attachmentCount = validateAttachmentCount(attachmentCount)
         )
 }
 
@@ -134,3 +151,34 @@ private fun String.isValidXml(): Boolean =
         true
     }
         .getOrElse { false }
+
+sealed interface AttachmentCountValidation : Validation {
+    data class Valid(
+        val value: Int
+    ) : AttachmentCountValidation {
+        override val isValid = true
+    }
+
+    data class Invalid(
+        val reason: String
+    ) : AttachmentCountValidation {
+        override val isValid = false
+    }
+}
+
+internal fun validateAttachmentCount(
+    value: String?
+): AttachmentCountValidation {
+    if (value == null) {
+        return AttachmentCountValidation.Invalid(
+            "Kafka header attachments-count is missing"
+        )
+    }
+
+    val attachmentCount = value.toIntOrNull()
+        ?: return AttachmentCountValidation.Invalid(
+            "Kafka header attachments-count is not a valid integer"
+        )
+
+    return AttachmentCountValidation.Valid(attachmentCount)
+}

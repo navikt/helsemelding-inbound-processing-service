@@ -26,7 +26,7 @@ class InboundMessageTopologySpec : StringSpec(
         )
 
         "should route valid JSON message to outbound topic" {
-            val convertedJson = """{"converted": true}"""
+            val convertedJson = """{"converted": true, "numberOfAttachments": 0}"""
             val messageConverter = mockk<MessageConverter>()
             every { messageConverter.incomingDialogMessageXmlToJson(any()) } returns convertedJson.right()
 
@@ -42,9 +42,15 @@ class InboundMessageTopologySpec : StringSpec(
                     Serdes.String().deserializer()
                 )
 
-                inputTopic.pipeInput(TestRecord(validKey, validXml, RecordHeaders()))
+                inputTopic.pipeInput(
+                    TestRecord(
+                        validKey,
+                        validXml,
+                        RecordHeaders().add(ATTACHMENT_COUNT_HEADER, "2".encodeToByteArray())
+                    )
+                )
 
-                outboundTopic.readValue() shouldBe convertedJson
+                outboundTopic.readValue() shouldBe """{"converted":true,"numberOfAttachments":2}"""
             }
         }
 
@@ -63,7 +69,13 @@ class InboundMessageTopologySpec : StringSpec(
                     Serdes.String().deserializer()
                 )
 
-                inputTopic.pipeInput(TestRecord("not-a-uuid", "not valid xml", RecordHeaders()))
+                inputTopic.pipeInput(
+                    TestRecord(
+                        "not-a-uuid",
+                        "not valid xml",
+                        RecordHeaders().add(ATTACHMENT_COUNT_HEADER, "2".encodeToByteArray())
+                    )
+                )
 
                 outboundTopic.isEmpty shouldBe true
             }
@@ -86,7 +98,41 @@ class InboundMessageTopologySpec : StringSpec(
                     Serdes.String().deserializer()
                 )
 
-                inputTopic.pipeInput(TestRecord(validKey, validXml, RecordHeaders()))
+                inputTopic.pipeInput(
+                    TestRecord(
+                        validKey,
+                        validXml,
+                        RecordHeaders().add(ATTACHMENT_COUNT_HEADER, "2".encodeToByteArray())
+                    )
+                )
+
+                outboundTopic.isEmpty shouldBe true
+            }
+        }
+
+        "should discard converted JSON without numberOfAttachments" {
+            val messageConverter = mockk<MessageConverter>()
+            every { messageConverter.incomingDialogMessageXmlToJson(any()) } returns """{"converted": true}""".right()
+
+            buildDriver(messageConverter).use { driver ->
+                val inputTopic = driver.createInputTopic(
+                    kafkaStreams.topics.dialogMessageIn,
+                    Serdes.String().serializer(),
+                    Serdes.String().serializer()
+                )
+                val outboundTopic = driver.createOutputTopic(
+                    kafkaStreams.topics.dialogMessageOut,
+                    Serdes.String().deserializer(),
+                    Serdes.String().deserializer()
+                )
+
+                inputTopic.pipeInput(
+                    TestRecord(
+                        validKey,
+                        validXml,
+                        RecordHeaders().add(ATTACHMENT_COUNT_HEADER, "2".encodeToByteArray())
+                    )
+                )
 
                 outboundTopic.isEmpty shouldBe true
             }

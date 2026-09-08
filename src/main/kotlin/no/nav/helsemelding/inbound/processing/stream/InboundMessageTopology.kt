@@ -1,6 +1,10 @@
 package no.nav.helsemelding.inbound.processing.stream
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import no.nav.helsemelding.inbound.processing.config
 import no.nav.helsemelding.messageconverter.MessageConverter
 import org.apache.kafka.streams.StreamsBuilder
@@ -70,7 +74,32 @@ class InboundMessageTopology(
                         log.error { "Failed to convert XML to JSON: ${it.message}" }
                         emptyList()
                     },
-                    ::listOf
+                    { convertedJson ->
+                        convertedJson.withAttachmentCount(message.attachmentCount)
+                            ?.let(::listOf)
+                            ?: emptyList()
+                    }
                 )
         }
+
+    private fun String.withAttachmentCount(attachmentCount: Int?): String? {
+        val jsonObject = try {
+            Json.parseToJsonElement(this) as JsonObject
+        } catch (_: SerializationException) {
+            log.error { "Converted JSON is invalid" }
+            return null
+        } catch (_: IllegalArgumentException) {
+            log.error { "Converted JSON is invalid" }
+            return null
+        }
+
+        if (!jsonObject.containsKey("numberOfAttachments")) {
+            log.error { "Converted JSON is missing numberOfAttachments" }
+            return null
+        }
+
+        return JsonObject(
+            jsonObject + ("numberOfAttachments" to JsonPrimitive(requireNotNull(attachmentCount)))
+        ).toString()
+    }
 }
