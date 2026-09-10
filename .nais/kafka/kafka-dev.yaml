@@ -3,7 +3,7 @@ kind: Topic
 metadata:
   labels:
     team: helsemelding
-  name: dialog.in.json
+  name: dialog.in
   namespace: helsemelding
 spec:
   pool: nav-dev

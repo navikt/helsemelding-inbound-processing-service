@@ -15,7 +15,7 @@ InboundMessageValidator
     |
     +-- invalid record --> logged and discarded
     |
-    +-- valid XML --> message-converter --> helsemelding.dialog.in.json
+    +-- valid XML --> message-converter --> helsemelding.dialog.in
 ```
 
 ## Validation
@@ -32,4 +32,4 @@ Invalid messages are logged as warnings and discarded.
 Default topic config:
 
 - Input XML: `helsemelding.dialog.in.xml`
-- Output JSON: `helsemelding.dialog.in.json`
+- Output JSON: `helsemelding.dialog.in`
