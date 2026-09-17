@@ -8,7 +8,6 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import no.nav.helsemelding.inbound.processing.config
-import no.nav.helsemelding.inbound.processing.stream.exception.FatalConversionException
 import no.nav.helsemelding.messageconverter.MessageConverter
 import no.nav.helsemelding.messageconverter.error.MappingError
 import org.apache.kafka.common.header.internals.RecordHeaders
