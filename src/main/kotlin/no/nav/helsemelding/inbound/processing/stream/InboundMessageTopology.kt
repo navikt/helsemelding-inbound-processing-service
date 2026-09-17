@@ -71,8 +71,7 @@ class InboundMessageTopology(
             messageConverter.incomingDialogMessageXmlToJson(message.payload)
                 .fold(
                     {
-                        log.error { "Failed to convert XML to JSON: ${it.message}" }
-                        emptyList()
+                        throw FatalConversionException("Failed to convert XML to JSON: ${it.message}")
                     },
                     { convertedJson ->
                         convertedJson.withAttachmentCount(message.attachmentCount)
@@ -103,3 +102,5 @@ class InboundMessageTopology(
         ).toString()
     }
 }
+
+internal class FatalConversionException(message: String) : RuntimeException(message)
