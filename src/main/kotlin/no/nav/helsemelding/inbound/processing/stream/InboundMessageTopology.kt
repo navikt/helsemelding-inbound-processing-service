@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import no.nav.helsemelding.inbound.processing.config
+import no.nav.helsemelding.inbound.processing.stream.exception.FatalConversionException
 import no.nav.helsemelding.messageconverter.MessageConverter
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.Topology
@@ -71,8 +72,9 @@ class InboundMessageTopology(
             messageConverter.incomingDialogMessageXmlToJson(message.payload)
                 .fold(
                     {
-                        log.error { "Failed to convert XML to JSON: ${it.message}" }
-                        emptyList()
+                        val errorMessage = "Failed to convert XML to JSON: ${it.message}"
+                        log.error { errorMessage }
+                        throw FatalConversionException(errorMessage)
                     },
                     { convertedJson ->
                         convertedJson.withAttachmentCount(message.attachmentCount)
