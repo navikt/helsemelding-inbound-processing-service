@@ -52,7 +52,10 @@ class InboundMessageTopologySpec : StringSpec(
                     )
                 )
 
-                outboundTopic.readValue() shouldBe """{"converted":true,"numberOfAttachments":2}"""
+                val record = outboundTopic.readRecord()
+
+                record.key() shouldBe null
+                record.value() shouldBe """{"converted":true,"numberOfAttachments":2}"""
             }
         }
 

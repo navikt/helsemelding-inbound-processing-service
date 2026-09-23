@@ -50,6 +50,7 @@ class InboundMessageTopology(
                 }
             }
             .toJsonPayload()
+            .selectKey { _, _ -> null }
             .to(config().kafkaStreamsSettings.topics.dialogMessageOut)
     }
 
