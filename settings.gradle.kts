@@ -34,7 +34,7 @@ dependencyResolutionManagement {
 
             library("kotlinx-serialization-json", "org.jetbrains.kotlinx", "kotlinx-serialization-json").versionRef("kotlinx-serialization")
 
-            library("message-converter", "no.nav.helsemelding", "message-converter").version("0.0.5")
+            library("message-converter", "no.nav.helsemelding", "message-converter").version("0.0.10-SNAPSHOT")
 
             library("kotlin-logging", "io.github.oshai", "kotlin-logging-jvm").versionRef("kotlin-logging")
             library("logback-classic", "ch.qos.logback", "logback-classic").versionRef("logback")
