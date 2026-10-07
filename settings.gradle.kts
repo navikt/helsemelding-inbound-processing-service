@@ -14,6 +14,7 @@ dependencyResolutionManagement {
             version("logstash", "7.4")
             version("opentelemetry-mdc", "2.24.0-alpha")
             version("opentelemetry-extension-kotlin", "1.58.0")
+            version("message-converter", "0.0.10")
 
             library("arrow-core", "io.arrow-kt", "arrow-core").versionRef("arrow")
             library("arrow-functions", "io.arrow-kt", "arrow-functions").versionRef("arrow")
@@ -34,7 +35,7 @@ dependencyResolutionManagement {
 
             library("kotlinx-serialization-json", "org.jetbrains.kotlinx", "kotlinx-serialization-json").versionRef("kotlinx-serialization")
 
-            library("message-converter", "no.nav.helsemelding", "message-converter").version("0.0.5")
+            library("message-converter", "no.nav.helsemelding", "message-converter").versionRef("message-converter")
 
             library("kotlin-logging", "io.github.oshai", "kotlin-logging-jvm").versionRef("kotlin-logging")
             library("logback-classic", "ch.qos.logback", "logback-classic").versionRef("logback")
